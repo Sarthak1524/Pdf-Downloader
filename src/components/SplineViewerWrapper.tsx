@@ -6,7 +6,7 @@ interface SplineViewerWrapperProps {
 }
 
 const SplineViewerWrapper: React.FC<SplineViewerWrapperProps> = ({ url, className }) => {
-  const splineRef = useRef<any>(null);
+  const splineRef = useRef<(HTMLElement & { url?: string }) | null>(null);
 
   useEffect(() => {
     if (splineRef.current && url) {

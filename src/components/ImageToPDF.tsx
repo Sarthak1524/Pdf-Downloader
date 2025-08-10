@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useRef } from 'react';
-import { Upload, Download, X, Image as ImageIcon, FileText, Settings, Eye, Maximize2, RotateCw, Palette, Zap, Crown, Gem, Star, Sparkles } from 'lucide-react';
+import React, { useState, useCallback } from 'react';
+import { Upload, Download, X, Image as ImageIcon, FileText, Settings, Eye, RotateCw, Palette, Zap, Crown, Gem, Star, Sparkles } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import SplineViewerWrapper from './SplineViewerWrapper';
 
@@ -40,8 +40,6 @@ const ImageToPDF: React.FC = () => {
   const [processingProgress, setProcessingProgress] = useState(0);
   const [currentProcessingStep, setCurrentProcessingStep] = useState('');
   const [showRobot, setShowRobot] = useState(false);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const workerRef = useRef<Worker | null>(null);
   
   const [settings, setSettings] = useState<UltraQualitySettings>({
     resolution: '4k',
@@ -96,7 +94,7 @@ const ImageToPDF: React.FC = () => {
   };
 
   // Optimized image enhancement with faster processing
-  const enhanceImageAI = async (imageFile: ImageFile): Promise<string> => {
+  const enhanceImageAI = useCallback(async (imageFile: ImageFile): Promise<string> => {
     return new Promise((resolve) => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
@@ -123,7 +121,7 @@ const ImageToPDF: React.FC = () => {
           'professional': Math.max(minWidth / img.width, minHeight / img.height, 1),
           'custom': settings.customDPI / 72,
           'standard': Math.max(minWidth / img.width, minHeight / img.height, 1)
-        };
+        } as const;
         
         const scale = scaleMap[settings.resolution] || 1;
         targetWidth = Math.round(img.width * scale);
@@ -180,7 +178,7 @@ const ImageToPDF: React.FC = () => {
       };
       img.src = imageFile.url;
     });
-  };
+  }, [settings.resolution, settings.customDPI, settings.aiEnhancement, settings.sharpening, settings.noiseReduction]);
 
   const handleFileUpload = useCallback(async (files: FileList) => {
     const validFiles = Array.from(files).filter(file => 
@@ -227,7 +225,7 @@ const ImageToPDF: React.FC = () => {
     } else {
       setImages(prev => prev.map(img => ({ ...img, processingStatus: 'ready' })));
     }
-  }, [settings.aiEnhancement]);
+  }, [settings.aiEnhancement, enhanceImageAI]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -312,7 +310,7 @@ const ImageToPDF: React.FC = () => {
       'Letter': settings.orientation === 'portrait' ? [216, 279] : [279, 216],
       'Legal': settings.orientation === 'portrait' ? [216, 356] : [356, 216],
       'custom': [210, 297]
-    };
+    } as const;
     return dimensions[settings.pageSize];
   };
 
@@ -399,7 +397,7 @@ const ImageToPDF: React.FC = () => {
                 '8k': Math.max(7680 / canvasWidth, 4320 / canvasHeight, 1),
                 '4k': Math.max(3840 / canvasWidth, 2160 / canvasHeight, 1),
                 'ultra': Math.max(2560 / canvasWidth, 1440 / canvasHeight, 1)
-              };
+              } as const;
               
               const qualityScale = qualityScales[settings.resolution] || 1;
               canvasWidth *= qualityScale;
@@ -655,7 +653,7 @@ const ImageToPDF: React.FC = () => {
                 </label>
                 <select
                   value={settings.resolution}
-                  onChange={(e) => setSettings(prev => ({ ...prev, resolution: e.target.value as any }))}
+                  onChange={(e) => setSettings(prev => ({ ...prev, resolution: e.target.value as UltraQualitySettings['resolution'] }))}
                   className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white focus:border-blue-400 focus:outline-none transition-all duration-300 hover:bg-white/15"
                 >
                   <option value="standard">📱 Standard (300 DPI)</option>
@@ -731,7 +729,7 @@ const ImageToPDF: React.FC = () => {
                   </label>
                   <select
                     value={settings.colorSpace}
-                    onChange={(e) => setSettings(prev => ({ ...prev, colorSpace: e.target.value as any }))}
+                    onChange={(e) => setSettings(prev => ({ ...prev, colorSpace: e.target.value as UltraQualitySettings['colorSpace'] }))}
                     className="w-full p-4 bg-white/10 border border-white/20 rounded-lg text-white focus:border-blue-400 focus:outline-none transition-all duration-300"
                   >
                     <option value="sRGB">sRGB (Standard)</option>
@@ -753,7 +751,7 @@ const ImageToPDF: React.FC = () => {
                         name="bitDepth"
                         value="8bit"
                         checked={settings.bitDepth === '8bit'}
-                        onChange={(e) => setSettings(prev => ({ ...prev, bitDepth: e.target.value as any }))}
+                        onChange={(e) => setSettings(prev => ({ ...prev, bitDepth: e.target.value as UltraQualitySettings['bitDepth'] }))}
                         className="text-blue-500"
                       />
                       <span className="text-white">8-bit</span>
@@ -764,7 +762,7 @@ const ImageToPDF: React.FC = () => {
                         name="bitDepth"
                         value="16bit"
                         checked={settings.bitDepth === '16bit'}
-                        onChange={(e) => setSettings(prev => ({ ...prev, bitDepth: e.target.value as any }))}
+                        onChange={(e) => setSettings(prev => ({ ...prev, bitDepth: e.target.value as UltraQualitySettings['bitDepth'] }))}
                         className="text-blue-500"
                       />
                       <span className="text-white">16-bit</span>
@@ -837,7 +835,7 @@ const ImageToPDF: React.FC = () => {
                     <p>📐 {image.width}×{image.height}</p>
                     <p>🎯 {image.resolution} DPI</p>
                     <p>📁 {(image.file.size / (1024 * 1024)).toFixed(2)} MB</p>
-                    <p className={`font-medium ${image.processingStatus === 'ready' ? 'text-green-400' : 'text-yellow-400'}`}>
+                    <p className={`${image.processingStatus === 'ready' ? 'text-green-400' : 'text-yellow-400'} font-medium`}>
                       {image.processingStatus === 'ready' ? '✅ Ready' : '⏳ Processing'}
                     </p>
                   </div>
@@ -848,100 +846,52 @@ const ImageToPDF: React.FC = () => {
         </div>
       )}
 
-      {/* Convert Button */}
-      {images.length > 0 && !processing && (
-        <div className="text-center animate-fade-in-up">
-          <button
-            onClick={convertToUltraQualityPDF}
-            disabled={images.some(img => img.processingStatus !== 'ready')}
-            className="btn-primary bg-gradient-to-r from-blue-500 via-purple-600 to-pink-500 text-white px-16 py-8 rounded-2xl font-bold text-2xl hover:shadow-2xl hover:shadow-blue-500/50 transition-all duration-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-4 mx-auto hover:scale-110 animate-glow shadow-2xl"
-          >
-            <Crown className="h-8 w-8 animate-float" />
-            <Download className="h-8 w-8" />
-            <span>✨ Generate Ultra-Premium 4K PDF</span>
-            <Gem className="h-8 w-8 animate-float" />
-          </button>
-          <div className="mt-6 text-slate-300 text-sm bg-gradient-to-r from-white/5 via-white/10 to-white/5 p-6 rounded-xl backdrop-blur-sm border border-white/20">
-            <p className="font-semibold mb-3 text-lg">🎯 Current Ultra-Premium Settings:</p>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-              <div className="bg-white/5 p-3 rounded-lg">
-                <span className="text-blue-400 font-medium">Quality:</span>
-                <br />
-                <span>{settings.resolution === 'custom' ? `${settings.customDPI} DPI` : 
-                  settings.resolution === '8k' ? '8K Ultra Max' : 
-                  settings.resolution === '4k' ? '4K Ultra' : 
-                  settings.resolution === 'ultra' ? '2K Ultra' : 
-                  settings.resolution === 'professional' ? 'Professional HD' : 'Standard'}</span>
-              </div>
-              <div className="bg-white/5 p-3 rounded-lg">
-                <span className="text-purple-400 font-medium">Enhancement:</span>
-                <br />
-                <span>{settings.aiEnhancement ? '🤖 AI-Powered' : 'Standard'}</span>
-              </div>
-              <div className="bg-white/5 p-3 rounded-lg">
-                <span className="text-pink-400 font-medium">Color Space:</span>
-                <br />
-                <span>{settings.colorSpace} {settings.bitDepth}</span>
-              </div>
-              <div className="bg-white/5 p-3 rounded-lg">
-                <span className="text-green-400 font-medium">Format:</span>
-                <br />
-                <span>{settings.format.toUpperCase()} {settings.compression}%</span>
-              </div>
-            </div>
-            <div className="mt-4 text-center">
-              <p className="text-yellow-400 font-medium">🚀 Processing Time: 30-120 seconds for ultimate quality</p>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Preview Modal */}
       {showPreview && previewImage && (
-        <div className="fixed inset-0 bg-black/95 flex items-center justify-center z-50 animate-fade-in backdrop-blur-sm" onClick={() => setShowPreview(false)}>
-          <div className="max-w-7xl max-h-7xl p-8 relative">
-            <img
-              src={previewImage}
-              alt="Preview"
-              className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl animate-fade-in-up border border-white/20"
-              onClick={(e) => e.stopPropagation()}
-            />
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 animate-fade-in">
+          <div className="bg-white/10 backdrop-blur-md p-6 rounded-xl border border-white/20 max-w-4xl w-full relative">
             <button
               onClick={() => setShowPreview(false)}
-              className="absolute -top-4 -right-4 p-4 bg-red-500 text-white rounded-full hover:bg-red-600 transition-all duration-300 hover:scale-110 shadow-2xl"
+              className="absolute top-3 right-3 text-white/70 hover:text-white transition"
             >
-              <X className="h-6 w-6" />
+              ✕
             </button>
-            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/80 text-white px-6 py-3 rounded-full backdrop-blur-sm border border-white/20">
-              <span className="text-sm">🔍 Ultra-Quality Preview • Click outside to close</span>
+            <div className="max-h-[80vh] overflow-auto">
+              <img src={previewImage} alt="Preview" className="w-full h-auto rounded-lg" />
+            </div>
+            <div className="mt-4 text-right">
+              <a
+                href={previewImage}
+                download
+                className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition"
+              >
+                <Download className="h-4 w-4" />
+                Download Image
+              </a>
             </div>
           </div>
         </div>
       )}
 
-      {/* 3D Robot Animation during download */}
+      {/* Generate Button */}
+      {images.length > 0 && !processing && (
+        <div className="text-center animate-slide-in-up">
+          <button
+            onClick={convertToUltraQualityPDF}
+            className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:shadow-lg hover:shadow-blue-500/25 transition-all duration-300 flex items-center space-x-2 mx-auto"
+          >
+            <Download className="h-5 w-5" />
+            Generate Ultra-Quality PDF
+          </button>
+        </div>
+      )}
+
+      {/* 3D Robot (Spline) */}
       {showRobot && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 animate-fade-in backdrop-blur-sm">
-          <div className="text-center">
-            <div className="w-96 h-96 mb-6">
-              <SplineViewerWrapper 
-                url="https://prod.spline.design/fuH2LyqUAqYrkY7H/scene.splinecode"
-                className="w-full h-full"
-              />
-            </div>
-            <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
-              <h3 className="text-2xl font-bold text-white mb-2">🚀 Generating Your Ultra-Premium PDF</h3>
-              <p className="text-slate-300 mb-4">Our AI robot is crafting your document with 4K precision...</p>
-              <div className="w-full bg-white/20 rounded-full h-2 overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full animate-pulse"></div>
-              </div>
-              <p className="text-slate-400 text-sm mt-2">Almost ready for download!</p>
-            </div>
-          </div>
+        <div className="fixed bottom-6 right-6 w-64 h-64 bg-white/5 rounded-xl border border-white/20 shadow-2xl backdrop-blur-md animate-fade-in">
+          <SplineViewerWrapper url="https://prod.spline.design/q2cF6ERHxyQa6CZS/scene.splinecode" className="w-full h-full rounded-xl" />
         </div>
       )}
-
-      <canvas ref={canvasRef} className="hidden" />
     </div>
   );
 };

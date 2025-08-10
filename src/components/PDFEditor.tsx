@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Upload, Download, Type, Edit3, Square, Circle, Undo, Redo, Eye, Settings, Palette, Minus, Plus, Move, Trash2, RotateCw } from 'lucide-react';
+import { Upload, Download, Type, Edit3, Square, Circle, Undo, Redo, Eye, Settings, Palette, Minus, Plus, Trash2 } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 
 // Set up PDF.js worker
@@ -21,7 +21,7 @@ interface Annotation {
 
 export default function PDFEditor() {
   const [file, setFile] = useState<File | null>(null);
-  const [pdfDoc, setPdfDoc] = useState<any>(null);
+  const [pdfDoc, setPdfDoc] = useState<pdfjsLib.PDFDocumentProxy | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
@@ -60,7 +60,7 @@ export default function PDFEditor() {
   };
 
   // Render PDF page as background
-  const renderPage = async (pdf: any, pageNum: number) => {
+  const renderPage = useCallback(async (pdf: pdfjsLib.PDFDocumentProxy, pageNum: number) => {
     try {
       const page = await pdf.getPage(pageNum);
       const viewport = page.getViewport({ scale: scale });
@@ -82,7 +82,7 @@ export default function PDFEditor() {
         const renderContext = {
           canvasContext: pdfContext,
           viewport: viewport,
-        };
+        } as const;
         await page.render(renderContext).promise;
       }
 
@@ -91,7 +91,7 @@ export default function PDFEditor() {
     } catch (error) {
       console.error('Error rendering page:', error);
     }
-  };
+  }, [scale, renderAnnotations]);
 
   // Render all annotations for current page
   const renderAnnotations = useCallback(() => {
@@ -376,7 +376,7 @@ export default function PDFEditor() {
     if (pdfDoc) {
       renderPage(pdfDoc, currentPage);
     }
-  }, [currentPage, pdfDoc, scale]);
+  }, [currentPage, pdfDoc, renderPage]);
 
   return (
     <div className="p-8 animate-fade-in-up">

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, FileText, Merge, Split, Compass as Compress, Image, Download, Sparkles, Shield, Zap, Edit, Star, Crown, Gem } from 'lucide-react';
+import { FileText, Merge, Split, Compass as Compress, Image, Sparkles, Shield, Zap, Edit, Star, Crown, Gem } from 'lucide-react';
 import ImageToPDF from './components/ImageToPDF';
 import PDFMerge from './components/PDFMerge';
 import PDFSplit from './components/PDFSplit';
